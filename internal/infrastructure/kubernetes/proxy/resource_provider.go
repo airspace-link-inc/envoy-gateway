@@ -101,7 +101,15 @@ func (r *ResourceRender) Service() (*corev1.Service, error) {
 	serviceSpec := resource.ExpectedServiceSpec(envoyServiceConfig)
 	serviceSpec.Ports = ports
 	serviceSpec.Selector = resource.GetSelector(labels).MatchLabels
-	serviceSpec.ExternalIPs = r.infra.Addresses
+
+	switch *envoyServiceConfig.Type {
+	// external IPs the load balancer will accept traffic for
+	case egv1a1.ServiceTypeLoadBalancer:
+		serviceSpec.ExternalIPs = r.infra.Addresses
+	//  assign Adresses to the service (internal)
+	case egv1a1.ServiceTypeClusterIP:
+		serviceSpec.ClusterIPs = r.infra.Addresses
+	}
 
 	svc := &corev1.Service{
 		TypeMeta: metav1.TypeMeta{
