@@ -25,9 +25,7 @@ import (
 	"github.com/envoyproxy/gateway/internal/xds/types"
 )
 
-var (
-	ErrXdsClusterExists = errors.New("xds cluster exists")
-)
+var ErrXdsClusterExists = errors.New("xds cluster exists")
 
 const AuthorityHeaderKey = ":authority"
 
@@ -291,6 +289,11 @@ func (t *Translator) processHTTPListenerXdsTranslation(
 			errs = multierror.Append(errs, err)
 		}
 
+		// Create external authorization clusters, if needed.
+		if err := createExtAuthzClusters(tCtx, httpListener.Routes); err != nil {
+			errs = multierror.Append(errs, err)
+		}
+
 		// Create oauth2 token endpoint clusters, if needed.
 		if err := createOAuth2TokenEndpointClusters(tCtx, httpListener.Routes); err != nil {
 			errs = multierror.Append(errs, err)
@@ -388,7 +391,8 @@ func processUDPListenerXdsTranslation(tCtx *types.ResourceVersionTable, udpListe
 
 // findXdsListenerByHostPort finds a xds listener with the same address, port and protocol, and returns nil if there is no match.
 func findXdsListenerByHostPort(tCtx *types.ResourceVersionTable, address string, port uint32,
-	protocol corev3.SocketAddress_Protocol) *listenerv3.Listener {
+	protocol corev3.SocketAddress_Protocol,
+) *listenerv3.Listener {
 	if tCtx == nil || tCtx.XdsResources == nil || tCtx.XdsResources[resourcev3.ListenerType] == nil {
 		return nil
 	}

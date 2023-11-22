@@ -47,6 +47,8 @@ func newOrderedHTTPFilter(filter *hcmv3.HttpFilter) *OrderedHTTPFilter {
 		order = 3
 	case filter.Name == wellknown.HTTPRateLimit:
 		order = 4
+	case filter.Name == extAuthzFilter:
+		order = 5
 	case filter.Name == wellknown.Router:
 		order = 100
 	}
@@ -94,7 +96,8 @@ func sortHTTPFilters(filters []*hcmv3.HttpFilter) []*hcmv3.HttpFilter {
 // newOrderedHTTPFilter method.
 func (t *Translator) patchHCMWithFilters(
 	mgr *hcmv3.HttpConnectionManager,
-	irListener *ir.HTTPListener) error {
+	irListener *ir.HTTPListener,
+) error {
 	// The order of filter patching is not relevant here.
 	// All the filters will be sorted in correct order after the patching is done.
 	// Important: don't forget to set the order for new filters in the
@@ -110,6 +113,11 @@ func (t *Translator) patchHCMWithFilters(
 
 	// Add the jwt authn filter, if needed.
 	if err := patchHCMWithJWTAuthnFilter(mgr, irListener); err != nil {
+		return err
+	}
+
+	// Add the external authorzation filter, if needed.
+	if err := patchHCMWithExtAuthzFilter(mgr, irListener); err != nil {
 		return err
 	}
 
@@ -142,7 +150,8 @@ func (t *Translator) patchHCMWithFilters(
 // use their own native per-route configuration.
 func patchRouteCfgWithPerRouteConfig(
 	routeCfg *routev3.RouteConfiguration,
-	irListener *ir.HTTPListener) error {
+	irListener *ir.HTTPListener,
+) error {
 	// Only supports the oauth2 filter for now, other filters will be added later.
 	return patchRouteCfgWithOAuth2Filter(routeCfg, irListener)
 }
@@ -150,11 +159,11 @@ func patchRouteCfgWithPerRouteConfig(
 // patchRouteWithPerRouteConfig appends per-route filter configurations to the route.
 func patchRouteWithPerRouteConfig(
 	route *routev3.Route,
-	irRoute *ir.HTTPRoute) error {
+	irRoute *ir.HTTPRoute,
+) error {
 	// TODO: Convert this into a generic interface for API Gateway features.
 	//       https://github.com/envoyproxy/gateway/issues/882
-	if err :=
-		patchRouteWithRateLimit(route.GetRoute(), irRoute); err != nil {
+	if err := patchRouteWithRateLimit(route.GetRoute(), irRoute); err != nil {
 		return nil
 	}
 
@@ -165,6 +174,11 @@ func patchRouteWithPerRouteConfig(
 
 	// Add the jwt per route config to the route, if needed.
 	if err := patchRouteWithJWT(route, irRoute); err != nil {
+		return err
+	}
+
+	// Add the external authorization per route config to the route, if needed.
+	if err := patchRouteWithExtAuthz(route, irRoute); err != nil {
 		return err
 	}
 

@@ -33,7 +33,8 @@ func (t *Translator) ProcessSecurityPolicies(securityPolicies []*egv1a1.Security
 	gateways []*GatewayContext,
 	routes []RouteContext,
 	resources *Resources,
-	xdsIR XdsIRMap) []*egv1a1.SecurityPolicy {
+	xdsIR XdsIRMap,
+) []*egv1a1.SecurityPolicy {
 	var res []*egv1a1.SecurityPolicy
 
 	// Sort based on timestamp
@@ -123,7 +124,8 @@ func (t *Translator) ProcessSecurityPolicies(securityPolicies []*egv1a1.Security
 
 func resolveSecurityPolicyGatewayTargetRef(
 	policy *egv1a1.SecurityPolicy,
-	gateways map[types.NamespacedName]*policyGatewayTargetContext) *GatewayContext {
+	gateways map[types.NamespacedName]*policyGatewayTargetContext,
+) *GatewayContext {
 	targetNs := policy.Spec.TargetRef.Namespace
 	// If empty, default to namespace of policy
 	if targetNs == nil {
@@ -187,7 +189,8 @@ func resolveSecurityPolicyGatewayTargetRef(
 
 func resolveSecurityPolicyRouteTargetRef(
 	policy *egv1a1.SecurityPolicy,
-	routes map[policyTargetRouteKey]*policyRouteTargetContext) RouteContext {
+	routes map[policyTargetRouteKey]*policyRouteTargetContext,
+) RouteContext {
 	targetNs := policy.Spec.TargetRef.Namespace
 	// If empty, default to namespace of policy
 	if targetNs == nil {
@@ -257,11 +260,13 @@ func resolveSecurityPolicyRouteTargetRef(
 
 func (t *Translator) translateSecurityPolicyForRoute(
 	policy *egv1a1.SecurityPolicy, route RouteContext,
-	resources *Resources, xdsIR XdsIRMap) error {
+	resources *Resources, xdsIR XdsIRMap,
+) error {
 	// Build IR
 	var (
 		cors      *ir.CORS
 		jwt       *ir.JWT
+		extAuthz  *ir.ExtAuthz
 		oidc      *ir.OIDC
 		err, errs error
 	)
@@ -274,6 +279,10 @@ func (t *Translator) translateSecurityPolicyForRoute(
 
 	if policy.Spec.JWT != nil {
 		jwt = t.buildJWT(policy.Spec.JWT)
+	}
+
+	if policy.Spec.ExtAuthz != nil {
+		extAuthz = t.buildExtAuthz(policy.Spec.ExtAuthz)
 	}
 
 	if policy.Spec.OIDC != nil {
@@ -295,6 +304,7 @@ func (t *Translator) translateSecurityPolicyForRoute(
 				if strings.HasPrefix(r.Name, prefix) {
 					r.CORS = cors
 					r.JWT = jwt
+					r.ExtAuthz = extAuthz
 					r.OIDC = oidc
 				}
 			}
@@ -305,11 +315,13 @@ func (t *Translator) translateSecurityPolicyForRoute(
 
 func (t *Translator) translateSecurityPolicyForGateway(
 	policy *egv1a1.SecurityPolicy, gateway *GatewayContext,
-	resources *Resources, xdsIR XdsIRMap) error {
+	resources *Resources, xdsIR XdsIRMap,
+) error {
 	// Build IR
 	var (
 		cors      *ir.CORS
 		jwt       *ir.JWT
+		extAuthz  *ir.ExtAuthz
 		oidc      *ir.OIDC
 		err, errs error
 	)
@@ -323,6 +335,10 @@ func (t *Translator) translateSecurityPolicyForGateway(
 
 	if policy.Spec.JWT != nil {
 		jwt = t.buildJWT(policy.Spec.JWT)
+	}
+
+	if policy.Spec.ExtAuthz != nil {
+		extAuthz = t.buildExtAuthz(policy.Spec.ExtAuthz)
 	}
 
 	if policy.Spec.OIDC != nil {
@@ -353,6 +369,9 @@ func (t *Translator) translateSecurityPolicyForGateway(
 			}
 			if r.JWT == nil {
 				r.JWT = jwt
+			}
+			if r.ExtAuthz == nil {
+				r.ExtAuthz = extAuthz
 			}
 			if r.OIDC == nil {
 				r.OIDC = oidc
@@ -413,9 +432,16 @@ func (t *Translator) buildJWT(jwt *egv1a1.JWT) *ir.JWT {
 	}
 }
 
+func (t *Translator) buildExtAuthz(extAuthz *egv1a1.ExtAuthz) *ir.ExtAuthz {
+	return &ir.ExtAuthz{
+		GRPCURI: extAuthz.GRPCURI,
+	}
+}
+
 func (t *Translator) buildOIDC(
 	policy *egv1a1.SecurityPolicy,
-	resources *Resources) (*ir.OIDC, error) {
+	resources *Resources,
+) (*ir.OIDC, error) {
 	var (
 		oidc         = policy.Spec.OIDC
 		clientSecret *v1.Secret
