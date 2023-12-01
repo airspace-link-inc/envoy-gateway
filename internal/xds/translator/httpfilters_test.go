@@ -24,15 +24,15 @@ func Test_sortHTTPFilters(t *testing.T) {
 			filters: []*hcmv3.HttpFilter{
 				httpFilterForTest(wellknown.Router),
 				httpFilterForTest(wellknown.CORS),
-				httpFilterForTest(jwtAuthnFilter),
 				httpFilterForTest(extAuthzFilter),
+				httpFilterForTest(jwtAuthnFilter),
 				httpFilterForTest(wellknown.HTTPRateLimit),
 			},
 			want: []*hcmv3.HttpFilter{
 				httpFilterForTest(wellknown.CORS),
 				httpFilterForTest(jwtAuthnFilter),
-				httpFilterForTest(wellknown.HTTPRateLimit),
 				httpFilterForTest(extAuthzFilter),
+				httpFilterForTest(wellknown.HTTPRateLimit),
 				httpFilterForTest(wellknown.Router),
 			},
 		},
