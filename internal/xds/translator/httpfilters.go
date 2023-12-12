@@ -117,7 +117,7 @@ func (t *Translator) patchHCMWithFilters(
 		return err
 	}
 
-	// Add the external authorzation filter, if needed.
+	// Add the external authorization filter, if needed.
 	if err := patchHCMWithExtAuthzFilter(mgr, irListener); err != nil {
 		return err
 	}
