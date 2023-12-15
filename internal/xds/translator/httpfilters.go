@@ -158,7 +158,7 @@ func patchRouteCfgWithPerRouteConfig(
 		return err
 	}
 
-	// Ext Authz filter needs to be explicelty disabled per route if the route needs to
+	// Ext Authz filter needs to be explicitly disabled per route if the route needs to
 	// bypass the filter
 	if err := patchRouteCfgWithExtAuthzFilter(routeCfg, irListener); err != nil {
 		return err
