@@ -153,8 +153,18 @@ func patchRouteCfgWithPerRouteConfig(
 	routeCfg *routev3.RouteConfiguration,
 	irListener *ir.HTTPListener,
 ) error {
-	// Only supports the oauth2 filter for now, other filters will be added later.
-	return patchRouteCfgWithOAuth2Filter(routeCfg, irListener)
+	// OAuth2 filter
+	if err := patchRouteCfgWithOAuth2Filter(routeCfg, irListener); err != nil {
+		return err
+	}
+
+	// Ext Authz filter needs to be explicelty disabled per route if the route needs to
+	// bypass the filter
+	if err := patchRouteCfgWithExtAuthzFilter(routeCfg, irListener); err != nil {
+		return err
+	}
+
+	return nil
 }
 
 // patchRouteWithPerRouteConfig appends per-route filter configurations to the route.
@@ -178,15 +188,12 @@ func patchRouteWithPerRouteConfig(
 		return err
 	}
 
-	// Add the external authorization per route config to the route, if needed.
-	if err := patchRouteWithExtAuthz(route, irRoute); err != nil {
-		return err
-	}
-
 	// Add the oauth2 per route config to the route, if needed.
 	if err := patchRouteWithOAuth2(route, irRoute); err != nil {
 		return err
 	}
+
+	// note ext authz routes are only patched when disabling using patchRouteCfgWithExtAuthzFilter
 
 	return nil
 }
