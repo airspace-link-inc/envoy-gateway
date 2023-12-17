@@ -49,9 +49,6 @@ func TestTranslateXds(t *testing.T) {
 		requireEnvoyPatchPolicies bool
 	}{
 		{
-			name: "ext-authz",
-		},
-		{
 			name: "empty",
 		},
 		{
@@ -201,6 +198,12 @@ func TestTranslateXds(t *testing.T) {
 		},
 		{
 			name: "listener-proxy-protocol",
+		},
+		{
+			name: "ext-authz",
+		},
+		{
+			name: "ext-authz-two-routes",
 		},
 	}
 
