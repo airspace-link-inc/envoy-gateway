@@ -46,6 +46,7 @@ var (
 	ErrAddHeaderDuplicate            = errors.New("header modifier filter attempts to add the same header more than once (case insensitive)")
 	ErrRemoveHeaderDuplicate         = errors.New("header modifier filter attempts to remove the same header more than once (case insensitive)")
 	ErrLoadBalancerInvalid           = errors.New("loadBalancer setting is invalid, only one setting can be set")
+	ErrExtAuthzEmptyURI              = errors.New("extauthz setting is invalid, empty grpc uri")
 )
 
 // Xds holds the intermediate representation of a Gateway and is
@@ -484,6 +485,11 @@ func (h HTTPRoute) Validate() error {
 			errs = multierror.Append(errs, err)
 		}
 	}
+	if h.ExtAuthz != nil {
+		if err := h.ExtAuthz.validate(); err != nil {
+			errs = multierror.Append(errs, err)
+		}
+	}
 
 	return errs
 }
@@ -492,6 +498,20 @@ func (j *JWT) validate() error {
 	var errs error
 
 	if err := validation.ValidateJWTProvider(j.Providers); err != nil {
+		errs = multierror.Append(errs, err)
+	}
+
+	return errs
+}
+
+func (a *ExtAuthz) validate() error {
+	var errs error
+
+	if a.GRPCURI == "" {
+		return ErrExtAuthzEmptyURI
+	}
+
+	if err := validation.ValidateExtAuthzURI(a.GRPCURI); err != nil {
 		errs = multierror.Append(errs, err)
 	}
 
